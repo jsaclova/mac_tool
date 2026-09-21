@@ -1,0 +1,240 @@
+#!/bin/bash
+# ===============================================
+# Name: macapps
+# Author: Jin (jsaclova@gmail.com)
+# Date: 2026-09-21
+# Description: Installed Software Asset Lister & Interactive Launcher with Smart Search
+# ===============================================
+
+# 1. 환경 변수 및 고정 경로 설정
+TOOL_DIR="$HOME/bin/mac_tool"
+CURRENT_DATE=$(date "+%Y-%m-%d")
+EXPORT_FILE="$TOOL_DIR/apps_${CURRENT_DATE}.txt"
+
+# 사용자가 -o 또는 --output 옵션을 입력했는지 판별
+EXPORT_FLAG=0
+if [ "$1" == "-o" ] || [ "$1" == "--output" ]; then
+    EXPORT_FLAG=1
+fi
+
+# 기존 파일 안전 초기화
+if [ "$EXPORT_FLAG" -eq 1 ]; then
+    rm -f "$EXPORT_FILE"
+    mkdir -p "$TOOL_DIR" 2>/dev/null
+fi
+
+# 2. 터미널 출력을 임시 보관할 버퍼 파일 가동
+TMP_BUFFER=$(mktemp /tmp/macapps_buffer.XXXXXX)
+
+# 일반 텍스트 라인 적재 함수
+print_line() {
+    echo "$1" >> "$TMP_BUFFER"
+    if [ "$EXPORT_FLAG" -eq 1 ]; then
+        echo "$1" >> "$EXPORT_FILE"
+    fi
+}
+
+# 정밀 포맷팅용 라인 적재 함수 (2줄 보정형 레이아웃)
+print_formatted() {
+    local fmt="$1"
+    local arg1="$2"
+    local arg2="$3"
+    local arg3="$4"
+    if [ ! -z "$arg3" ]; then
+        printf "$fmt" "$arg1" "$arg2" "$arg3" >> "$TMP_BUFFER"
+        [ "$EXPORT_FLAG" -eq 1 ] && printf "$fmt" "$arg1" "$arg2" "$arg3" >> "$EXPORT_FILE"
+    else
+        printf "$fmt" "$arg1" "$arg2" >> "$TMP_BUFFER"
+        [ "$EXPORT_FLAG" -eq 1 ] && printf "$fmt" "$arg1" "$arg2" >> "$EXPORT_FILE"
+    fi
+}
+
+# 3. 데이터 수집 대시보드 작성
+print_line "============================================================"
+print_line " ▶️ Program     : macapps"
+print_line " ▶️ Author      : Jin (jsaclova@gmail.com)"
+print_line " ▶️ Description : Installed Software Asset Lister & Launcher"
+print_line "============================================================"
+print_line "  Extracting installed software infrastructure map from your Mac..."
+print_line "============================================================"
+print_line ""
+
+app_paths=()
+app_names=()
+launch_idx=1
+
+# 1. Installed System Applications (/Applications)
+print_line "🌐 1. Installed System Applications (/Applications)"
+print_line "------------------------------------------------------------"
+if [ -d "/Applications" ]; then
+    while read -r app_path; do
+        [ -z "$app_path" ] && continue
+        APP_NAME=$(basename "$app_path" .app)
+        
+        PLIST_PATH="${app_path}/Contents/Info.plist"
+        EXEC_NAME=""
+        if [ -f "$PLIST_PATH" ]; then
+            EXEC_NAME=$(defaults read "${PLIST_PATH%.plist}" CFBundleExecutable 2>/dev/null)
+        fi
+        
+        if [ -z "$EXEC_NAME" ]; then
+            FINAL_PATH="${app_path}/Contents/MacOS/${APP_NAME}"
+        else
+            FINAL_PATH="${app_path}/Contents/MacOS/${EXEC_NAME}"
+        fi
+        
+        if [[ "$FINAL_PATH" == *" "* ]]; then
+            FINAL_PATH="\"$FINAL_PATH\""
+        fi
+        
+        app_paths+=("$FINAL_PATH")
+        app_names+=("$APP_NAME")
+        
+        print_formatted "  [%d] 🔹 %-38s\n" "$launch_idx" "$APP_NAME"
+        print_line "           └─ ➜  $FINAL_PATH"
+        launch_idx=$((launch_idx + 1))
+    done <<< "$(find "/Applications" -maxdepth 1 -name "*.app" 2>/dev/null | sort)"
+else
+    print_line "  ⚪️ No directory found at /Applications"
+fi
+print_line ""
+
+# 2. Installed User Applications (~/Applications)
+print_line "👤 2. Installed User Applications (~/Applications)"
+print_line "------------------------------------------------------------"
+if [ -d "$HOME/Applications" ] && [ "$(find "$HOME/Applications" -maxdepth 1 -name "*.app" 2>/dev/null)" ]; then
+    while read -r app_path; do
+        [ -z "$app_path" ] && continue
+        APP_NAME=$(basename "$app_path" .app)
+        
+        PLIST_PATH="${app_path}/Contents/Info.plist"
+        EXEC_NAME=""
+        if [ -f "$PLIST_PATH" ]; then
+            EXEC_NAME=$(defaults read "${PLIST_PATH%.plist}" CFBundleExecutable 2>/dev/null)
+        fi
+        
+        if [ -z "$EXEC_NAME" ]; then
+            FINAL_PATH="${app_path}/Contents/MacOS/${APP_NAME}"
+        else
+            FINAL_PATH="${app_path}/Contents/MacOS/${EXEC_NAME}"
+        fi
+        
+        if [[ "$FINAL_PATH" == *" "* ]]; then
+            FINAL_PATH="\"$FINAL_PATH\""
+        fi
+        
+        app_paths+=("$FINAL_PATH")
+        app_names+=("$APP_NAME")
+        
+        print_formatted "  [%d] 🔹 %-38s\n" "$launch_idx" "$APP_NAME"
+        print_line "           └─ ➜  $FINAL_PATH"
+        launch_idx=$((launch_idx + 1))
+    done <<< "$(find "$HOME/Applications" -maxdepth 1 -name "*.app" 2>/dev/null | sort)"
+else
+    print_line "  ⚪️ User local Applications directory is empty or not found."
+fi
+print_line ""
+
+# 3. Installed Homebrew Packages (CLI Tools)
+print_line "🍺 3. Installed Homebrew Packages (CLI Tools)"
+print_line "------------------------------------------------------------"
+if command -v brew &> /dev/null; then
+    BREW_LEAVES=$(brew leaves 2>/dev/null)
+    if [ ! -z "$BREW_LEAVES" ]; then
+        print_line "  [ CLI Tools ]"
+        while read -r line; do
+            [ -z "$line" ] && continue
+            REAL_WHICH=$(command -v "$line")
+            
+            app_paths+=("$REAL_WHICH")
+            app_names+=("$line")
+            
+            print_formatted "  [%d] ✔ %-36s\n" "$launch_idx" "$line"
+            print_line "           └─ ➜  $REAL_WHICH"
+            launch_idx=$((launch_idx + 1))
+        done <<< "$BREW_LEAVES"
+    fi
+else
+    print_line "  ⚪️ Homebrew Package Manager is not installed on this Mac."
+fi
+
+print_line "   Exit and Cancel (Return to local Mac terminal)"
+print_line "============================================================"
+
+# 최초 전체 리스트 버퍼 출력
+clear
+cat "$TMP_BUFFER"
+rm -f "$TMP_BUFFER"
+
+TOTAL_APPS=$((launch_idx - 1))
+
+# [대화형 루프 제어] 검색, list 요약 기능이 무한 반복 작동하는 파이프라인
+while true; do
+    echo "------------------------------------------------------------"
+    echo " 💡 Tip: Enter keywords (e.g., 'iT') to filter matching apps."
+    echo " 💡 Tip: Type 'list' to view compressed summary of ALL apps."
+    read -p "🚀 Enter number to LAUNCH (or text to SEARCH, '0' to quit): " APP_CHOICE
+    echo "------------------------------------------------------------"
+
+    # 1. 'list' 입력 시 3열 종대 압축 전체 리스트 인쇄
+    if [ "$APP_CHOICE" == "list" ]; then
+        echo "============================================================"
+        echo " 📋 Compressed Software Application List"
+        echo "============================================================"
+        for ((i=0; i<TOTAL_APPS; i++)); do
+            printf "  [%2d] %-22s " "$((i+1))" "${app_names[$i]}"
+            if [ "$(((i+1) % 3))" -eq 0 ]; then echo ""; fi
+        done
+        [ "$((TOTAL_APPS % 3))" -ne 0 ] && echo ""
+        echo "============================================================"
+        continue
+    fi
+
+    # 2. 0번 또는 탈출 문구 입력 시 안전 종료
+    if [ "$APP_CHOICE" == "0" ] || [ -z "$APP_CHOICE" ] || [ "$APP_CHOICE" == "q" ] || [ "$APP_CHOICE" == "exit" ] || [ "$APP_CHOICE" == "quit" ]; then
+        echo " 🚪 Cancelled. Safely returned to Mac terminal."
+        echo "============================================================"
+        exit 0
+    fi
+
+    # 3. [핵심 패치] 숫자가 아닌 문자열 진입 시 ➜ 단어 실시간 필터링 검색 로직 구동
+    if ! [[ "$APP_CHOICE" =~ ^[0-9]+$ ]]; then
+        echo "============================================================"
+        echo " 🔍 Filtered Search Results for keyword: '$APP_CHOICE'"
+        echo "============================================================"
+        
+        found_count=0
+        for ((i=0; i<TOTAL_APPS; i++)); do
+            # 대소문자 무시 검색 구조(grep -qi)
+            if echo "${app_names[$i]}" | grep -qi "$APP_CHOICE"; then
+                printf "  [%2d] 🔹 %-38s\n" "$((i+1))" "${app_names[$i]}"
+                found_count=$((found_count + 1))
+            fi
+        done
+        
+        if [ "$found_count" -eq 0 ]; then
+            echo "  ⚪️ No installed applications matched your keyword."
+        fi
+        echo "============================================================"
+        continue # 검색 필터링 목록을 확인한 상태에서 바로 번호를 칠 수 있도록 입력 프롬프트 복귀
+    fi
+
+    # 4. 최종 번호 유효 범위 유효성 검증
+    if [ "$APP_CHOICE" -lt 1 ] || [ "$APP_CHOICE" -gt "$TOTAL_APPS" ]; then
+        echo "❌ Error: Invalid selection number. Please enter a valid number, keyword, or 'list'."
+        continue
+    fi
+    break
+done
+
+# 5. 최종 백그라운드 비동기 기동 처리
+SELECTED_EXE="${app_paths[$((APP_CHOICE - 1))]}"
+SELECTED_NAME="${app_names[$((APP_CHOICE - 1))]}"
+
+echo " 🔍 Initializing platform execute engine..."
+echo " 🟢 Launching [$SELECTED_NAME] in background..."
+echo "============================================================"
+
+"$SELECTED_EXE" &>/dev/null &
+
+exit 0

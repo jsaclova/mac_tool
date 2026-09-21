@@ -1,0 +1,150 @@
+#!/bin/bash
+# ===============================================
+# Name: maclive
+# Author: Jin (jsaclova@gmail.com)
+# Date: 2026-09-21
+# Description: Live Running Applications Tracker & Interactive Process Killer with Smart Search
+# ===============================================
+
+clear
+echo "============================================================"
+echo " ▶️ Program     : maclive"
+echo " ▶️ Author      : Jin (jsaclova@gmail.com)"
+echo " ▶️ Description : Live Running Applications & Interactive Process Killer"
+echo "============================================================"
+echo "  Scanning currently active GUI software components..."
+echo "============================================================"
+echo ""
+
+echo "🔥 [LIVE] Currently Running Applications & Processes"
+echo "------------------------------------------------------------"
+
+# 프로세스 정보를 담을 가변 배열 선언
+live_pids=()
+live_names=()
+live_idx=1
+
+# ps 옵션으로 공백 유실을 막기 위해 원본 데이터를 수집합니다.
+RUNNING_DATA=$(ps -Ax -o pid= -o comm= 2>/dev/null | grep -E "\.app/")
+
+if [ ! -z "$RUNNING_DATA" ]; then
+    # 프로세스 치환 구조를 사용하여 배열 값 메모리 상시 유지
+    while read -r line; do
+        [ -z "$line" ] && continue
+        
+        # PID와 전체 절대 경로 분리 추출
+        PID=$(echo "$line" | awk '{print $1}')
+        RAW_PATH=$(echo "$line" | awk '{$1=""; print $0}' | sed 's/^[[:space:]]*//')
+        
+        CLEAN_APP_PATH=$(echo "$RAW_PATH" | sed -E 's/\.app\/.*/\.app/')
+        APP_NAME=$(basename "$CLEAN_APP_PATH" .app)
+        
+        # 시스템 코어 구성원 및 인쇄 노이즈 필터링
+        [[ "$APP_NAME" == "Contents" || -z "$APP_NAME" || "$APP_NAME" == "/" ]] && continue
+        
+        REAL_EXEC_PATH=$(echo "$RAW_PATH" | sed 's/[[:space:]]*$//')
+        
+        # 메인 메모리 영역 가변 배열 스토리지에 데이터 적재
+        live_pids+=("$PID")
+        live_names+=("$APP_NAME")
+        
+        # 번호 선택형 2줄 레이아웃으로 출력
+        printf "  [%d] 🟢 Running: %-30s [PID: %5s]\n" "$live_idx" "$APP_NAME" "$PID"
+        echo "           └─ ➜  $REAL_EXEC_PATH"
+        
+        live_idx=$((live_idx + 1))
+    done <<< "$RUNNING_DATA"
+else
+    echo "  ⚪️ No active GUI applications detected in the foreground."
+fi
+
+TOTAL_LIVE=$((live_idx - 1))
+
+# 언제든지 종료할 수 있는 0번 옵션 인쇄 고정
+printf "   Exit and Cancel (Return to local Mac terminal)\n"
+echo "============================================================"
+
+# 실행 중인 프로세스가 없으면 안전하게 즉시 종료
+if [ "$TOTAL_LIVE" -eq 0 ]; then
+    echo " ⚪️ Notice: No valid GUI applications running to terminate."
+    echo "============================================================"
+    exit 0
+fi
+
+# [대화형 루프 제어] 검색, 리스트 요약 호출이 무한 지원되는 지능형 입력 파이프라인
+while true; do
+    echo "------------------------------------------------------------"
+    echo " 💡 Tip: Enter keywords (e.g., 'iT') to filter matching apps."
+    echo " 💡 Tip: Type 'list' to view compressed summary of ALL apps."
+    read -p "💀 Enter number to KILL (or text to SEARCH, '0' to quit): " KILL_CHOICE
+    echo "------------------------------------------------------------"
+
+    # 1. 'list' 입력 시 3열 종대로 요약본 전체 인쇄
+    if [ "$KILL_CHOICE" == "list" ]; then
+        echo "============================================================"
+        echo " 📋 Compressed Running Applications List"
+        echo "============================================================"
+        for ((i=0; i<TOTAL_LIVE; i++)); do
+            printf "  [%2d] %-18s(%5s) " "$((i+1))" "${live_names[$i]}" "${live_pids[$i]}"
+            if [ "$(((i+1) % 3))" -eq 0 ]; then echo ""; fi
+        done
+        [ $((TOTAL_LIVE % 3)) -ne 0 ] && echo ""
+        echo "============================================================"
+        continue
+    fi
+
+    # 2. 0번 입력 또는 그냥 엔터, q 입력 시 안전하게 취소 종료
+    if [ "$KILL_CHOICE" == "0" ] || [ -z "$KILL_CHOICE" ] || [ "$KILL_CHOICE" == "q" ] || [ "$KILL_CHOICE" == "exit" ] || [ "$KILL_CHOICE" == "quit" ]; then
+        echo " 🚪 Cancelled. Process was not terminated."
+        echo "============================================================"
+        exit 0
+    fi
+
+    # 3. [핵심 패치] 숫자가 아닌 문자열이 들어왔을 경우 ➜ 단어 실시간 필터링 검색 모드 가동
+    if ! [[ "$KILL_CHOICE" =~ ^[0-9]+$ ]]; then
+        echo "============================================================"
+        echo " 🔍 Filtered Search Results for keyword: '$KILL_CHOICE'"
+        echo "============================================================"
+        
+        found_count=0
+        for ((i=0; i<TOTAL_LIVE; i++)); do
+            # 대소문자 가리지 않고 매칭 단어를 정밀 추적 (grep -qi 이용)
+            if echo "${live_names[$i]}" | grep -qi "$KILL_CHOICE"; then
+                # 매칭된 기물들만 고유 인덱스 번호를 유지한 채 콤팩트하게 화면 출력
+                printf "  [%2d] 🟢 Running: %-25s [PID: %5s]\n" "$((i+1))" "${live_names[$i]}" "${live_pids[$i]}"
+                found_count=$((found_count + 1))
+            fi
+        done
+        
+        if [ "$found_count" -eq 0 ]; then
+            echo "  ⚪️ No running applications matched your keyword."
+        fi
+        echo "============================================================"
+        continue # 검색 완료 후 원하는 번호를 바로 입력할 수 있게 제어권을 입력창으로 복귀
+    fi
+
+    # 4. 입력 값 유효 범위 검증 (최종 통과 단계)
+    if [ "$KILL_CHOICE" -lt 1 ] || [ "$KILL_CHOICE" -gt "$TOTAL_LIVE" ]; then
+        echo "❌ Error: Invalid selection number. Please enter a valid number, keyword, or 'list'."
+        continue
+    fi
+    
+    break
+done
+
+# 5. 선택한 프로세스의 PID와 이름 매핑 추출 및 최종 타격 처리
+TARGET_PID="${live_pids[$((KILL_CHOICE - 1))]}"
+TARGET_NAME="${live_names[$((KILL_CHOICE - 1))]}"
+
+echo " 🔍 Initializing kernel signal sender..."
+echo " 💥 Sending SIGKILL to [$TARGET_NAME] (PID: $TARGET_PID)..."
+
+kill -9 "$TARGET_PID" 2>/dev/null
+
+if [ $? -eq 0 ]; then
+    echo " 🎯 Success! [$TARGET_NAME] has been successfully terminated."
+else
+    echo " ❌ Error: Failed to kill process. It might have already closed or requires higher privileges."
+fi
+
+echo "============================================================"
