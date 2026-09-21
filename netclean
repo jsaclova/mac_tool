@@ -1,0 +1,59 @@
+#!/bin/bash
+# ===============================================
+# Name: netclean
+# Author: Jin (jsaclova@gmail.com)
+# Date: 2026-09-21
+# Description: Terminal Command History Permanent Eraser (Memory + File)
+# ===============================================
+
+clear
+echo "============================================================"
+echo " ▶️ Program     : netclean"
+echo " ▶️ Author      : Jin (jsaclova@gmail.com)"
+echo " ▶️ Description : Terminal Command History Permanent Eraser"
+echo "============================================================"
+echo "  This tool permanently wipes out all your terminal command"
+echo "  history from both the active memory and the history file."
+echo "============================================================"
+echo ""
+
+echo " 🔥 WARNING: This action will destroy all command history logs."
+echo " 📋 Select an option:"
+echo "------------------------------------------------------------"
+echo "   [1] Proceed with permanent history wiping"
+echo "   [0] Exit and Cancel (Return to local Mac terminal)"
+echo "------------------------------------------------------------"
+read -p "👉 Enter option number: " OPTION
+echo "------------------------------------------------------------"
+
+# 0번 혹은 탈출 키워드 입력 시 즉시 취소 종료
+if [ "\$OPTION" == "0" ] || [ "\(OPTION" == "q" ] \vert{}\vert{} [ "\)OPTION" == "quit" ] || [ "\(OPTION" == "exit" ] \vert{}\vert{} [ -z "\)OPTION" ]; then
+    echo " 🚪 Cancelled. Safely returned to Mac terminal."
+    echo "============================================================"
+    exit 0
+fi
+
+if [ "\$OPTION" == "1" ]; then
+    echo " 🧼 Step 1: Flushing active terminal session memory..."
+    # 현재 활성화된 셸의 이력 메모리 즉시 무효화 및 강제 초기화
+    history -c 2>/dev/null
+    
+    echo " 🧼 Step 2: Wiping physical .zshrc history file from disk..."
+    # 디스크에 누적 기록된 물리 히스토리 아카이브 파일 영구 제거
+    rm -f "\$HOME/.zsh_history" 2>/dev/null
+    rm -f "\$HOME/.bash_history" 2>/dev/null
+    
+    echo " 🧼 Step 3: Re-mapping safe clean database checkpoint..."
+    # 다음 터미널 부팅 시 셸 꼬임 현상을 방지하기 위해 무결점 빈 파일로 선점 재부팅
+    touch "\$HOME/.zsh_history" 2>/dev/null
+    
+    echo "------------------------------------------------------------"
+    echo " ✨ Success! Command history wiped out cleanly."
+    echo " ⚠️ IMPORTANT: Please CLOSE this terminal window completely"
+    echo "               and open a NEW window to apply changes fully!"
+    echo "============================================================"
+else
+    echo "❌ Error: Invalid option selected. Canceling process."
+    echo "============================================================"
+    exit 1
+fi

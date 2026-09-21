@@ -1,6 +1,16 @@
 #!/bin/bash
-# Name: mac_install (mac_tool 통합 인스톨러 및 업데이트 관리자)
-# Description: One-click Installer & Continuous Updater for mac_tool package
+# ===============================================
+# Name: mac_install
+# Author: Jin (jsaclova@gmail.com)
+# Date: 2026-09-21
+# Description: Installer & Continuous Update Manager for mac_tool package
+# ===============================================
+
+echo "============================================================"
+echo "          🍏 mac_tool Installation & Update Manager"
+echo "============================================================"
+echo " 💡 Synchronizing with remote GitHub repository..."
+echo "------------------------------------------------------------"
 
 TARGET_DIR="\$HOME/bin/mac_tool"
 ZSHRC="\$HOME/.zshrc"
@@ -20,10 +30,17 @@ fi
 
 if ! grep -q "mac_tool" "\$ZSHRC" 2>/dev/null; then
     echo 'export PATH="\$HOME/bin/mac_tool:PATH"' >> "ZSHRC"
+    echo " ✅ Added executing PATH to ~/.zshrc"
 fi
 
 if ! grep -q "alias macman=" "\$ZSHRC" 2>/dev/null; then
     echo "alias macman='cat ~/bin/mac_tool/manual | less -R'" >> "\$ZSHRC"
+    echo " ✅ Added short-command 'macman' to ~/.zshrc"
 fi
 
 chmod +x "\$HOME/bin/mac_tool/"* 2>/dev/null
+
+echo "------------------------------------------------------------"
+echo " ✨ System Synchronization Completed Successfully!"
+echo " 💡 run 'source ~/.zshrc' or open a new terminal window."
+echo "============================================================"
