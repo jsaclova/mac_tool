@@ -1,6 +1,6 @@
 #!/bin/bash
 # ===============================================
-# Name: netclean
+# Name: hisclean
 # Author: Jin (jsaclova@gmail.com)
 # Date: 2026-09-21
 # Description: Terminal Command History Permanent Eraser (Memory + File)
@@ -8,7 +8,7 @@
 
 clear
 echo "============================================================"
-echo " ▶️ Program     : netclean"
+echo " ▶️ Program     : hisclean"
 echo " ▶️ Author      : Jin (jsaclova@gmail.com)"
 echo " ▶️ Description : Terminal Command History Permanent Eraser"
 echo "============================================================"
