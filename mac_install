@@ -1,0 +1,29 @@
+#!/bin/bash
+# Name: mac_install (mac_tool 통합 인스톨러 및 업데이트 관리자)
+# Description: One-click Installer & Continuous Updater for mac_tool package
+
+TARGET_DIR="\$HOME/bin/mac_tool"
+ZSHRC="\$HOME/.zshrc"
+
+mkdir -p "\$HOME/bin"
+
+if [ -d "\$TARGET_DIR/.git" ]; then
+    cd "\$TARGET_DIR" || exit 1
+    git stash 2>/dev/null
+    git pull origin main --rebase
+    git stash pop 2>/dev/null
+else
+    cd "\$HOME/bin" || exit 1
+    rm -rf ./mac_tool 2>/dev/null
+    git clone git@github.com:jsaclova/mac_tool.git
+fi
+
+if ! grep -q "mac_tool" "\$ZSHRC" 2>/dev/null; then
+    echo 'export PATH="\$HOME/bin/mac_tool:PATH"' >> "ZSHRC"
+fi
+
+if ! grep -q "alias macman=" "\$ZSHRC" 2>/dev/null; then
+    echo "alias macman='cat ~/bin/mac_tool/manual | less -R'" >> "\$ZSHRC"
+fi
+
+chmod +x "\$HOME/bin/mac_tool/"* 2>/dev/null
