@@ -6,9 +6,9 @@
 # Description: Terminal Command History Permanent Eraser (Core Database Eraser)
 # ===============================================
 
-# 디스크에 기록된 물리 히스토리 파일 선행 제거
+# 디스크에 저장되어 있는 물리 히스토리 파일 선행 제거
 rm -f "$HOME/.zsh_history" 2>/dev/null
 rm -f "$HOME/.bash_history" 2>/dev/null
 
-# 다음 터미널 부팅 시 발생할 파일 시스템 충돌 방지를 위해 빈 파일 매핑
+# 시스템 충돌 방지를 위한 깨끗한 빈 체크포인트 파일 생성
 touch "$HOME/.zsh_history" 2>/dev/null
