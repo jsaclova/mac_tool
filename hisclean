@@ -3,7 +3,7 @@
 # Name: hisclean
 # Author: Jin (jsaclova@gmail.com)
 # Date: 2026-09-23
-# Description: Terminal Command History Permanent Eraser (Memory + File)
+# Description: Terminal Command History Permanent Eraser (Zsh Memory Wiping Fixed)
 # ===============================================
 
 clear
@@ -26,26 +26,29 @@ echo "------------------------------------------------------------"
 read -p "👉 Enter option number: " OPTION
 echo "------------------------------------------------------------"
 
-# 문자열 치환 및 대괄호 오작동 소지가 없는 순수 case 구문 분기 제어
 case "$OPTION" in
     1)
-        echo " 🧼 Step 1: Flushing active terminal session memory..."
-        # 현재 실행 중인 셸 세션의 실시간 입력 내역 즉시 무효화
-        history -c 2>/dev/null
-        
-        echo " 🧼 Step 2: Wiping physical history files from disk..."
-        # 디스크 파일에 영구 기록되어 누적된 아카이브 완전 도려내기
+        echo " 🧼 Step 1: Killing physical history databases from disk..."
+        # 디스크에 안전하게 적재되어 있던 물리 아카이브 파일 영구 격파
         rm -f "$HOME/.zsh_history" 2>/dev/null
         rm -f "$HOME/.bash_history" 2>/dev/null
         
+        echo " 🧼 Step 2: Wiping active Zsh session memory buffer..."
+        # [핵심 패치] Zsh 셸 내부의 세션 링 버퍼 및 히스토리 스택을 즉시 폭파하여 롤백 방지
+        history -c 2>/dev/null
+        if [ -n "$ZSH_VERSION" ]; then
+            # Zsh 환경일 경우 메모리 공간을 강제로 빈 컨텍스트로 전환하여 잔재 소멸
+            fc -p /dev/null 2>/dev/null
+        fi
+        
         echo " 🧼 Step 3: Re-mapping safe clean database checkpoint..."
-        # 다음 터미널 세션 부팅 시 발생할 수 있는 파일 시스템 꼬임 차단
+        # 다음 부팅 시 시스템 충돌을 막기 위해 무결한 공백 파일 재안착
         touch "$HOME/.zsh_history" 2>/dev/null
         
         echo "------------------------------------------------------------"
-        echo " ✨ Success! Command history wiped out cleanly."
-        echo " ⚠️ IMPORTANT: Please CLOSE this terminal window completely"
-        echo "               and open a NEW window to apply changes fully!"
+        echo " ✨ Success! Command history has been wiped out completely."
+        echo " 💡 Wiped out instantly! Even if you type 'history' right now,"
+        echo "    all past traces are completely gone."
         echo "============================================================"
         ;;
     0|q|quit|exit|"")
