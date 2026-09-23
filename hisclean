@@ -3,59 +3,12 @@
 # Name: hisclean
 # Author: Jin (jsaclova@gmail.com)
 # Date: 2026-09-23
-# Description: Terminal Command History Permanent Eraser (Direct Shell Function Binder)
+# Description: Terminal Command History Permanent Eraser (Core Database Eraser)
 # ===============================================
 
-# [원천 차단 가드] 사용자가 소스 바인딩 방식이 아닌 파일 방식으로 잘못 실행했을 경우,
-# 소스 방식으로 즉시 재가동하도록 안내하고 보호 처리합니다.
-if [ "$1" != "DIRECT_BURST" ]; then
-    clear
-    echo "============================================================"
-    echo " ▶️ Program     : hisclean"
-    echo " ▶️ Author      : Jin (jsaclova@gmail.com)"
-    echo " ▶️ Description : Terminal Command History Permanent Eraser"
-    echo "============================================================"
-    echo "  This tool permanently wipes out all your terminal command"
-    echo "  history from both the active memory and the history file."
-    echo "============================================================"
-    echo ""
-    echo " 🔥 WARNING: This action will destroy all command history logs."
-    echo " 📋 Select an option:"
-    echo "------------------------------------------------------------"
-    echo "   Proceed with permanent history wiping"
-    echo "   Exit and Cancel (Return to local Mac terminal)"
-    echo "------------------------------------------------------------"
-    read -p "👉 Enter option number: " OPTION
-    echo "------------------------------------------------------------"
+# 디스크에 기록된 물리 히스토리 파일 선행 제거
+rm -f "$HOME/.zsh_history" 2>/dev/null
+rm -f "$HOME/.bash_history" 2>/dev/null
 
-    case "$OPTION" in
-        1)
-            echo " 🧼 Wiping physical history files from disk..."
-            rm -f "$HOME/.zsh_history" 2>/dev/null
-            rm -f "$HOME/.bash_history" 2>/dev/null
-            touch "$HOME/.zsh_history" 2>/dev/null
-            
-            echo " 🧼 Accessing Parent Shell Memory Space..."
-            echo "------------------------------------------------------------"
-            # [스마트 바이패스] 부모 셸의 메모리 컨텍스트를 직접 열기 위해 내장 셸 함수 호출 시퀀스를 수립합니다.
-            if [ -n "$ZSH_VERSION" ]; then
-                builtin history -c 2>/dev/null
-                fc -p /dev/null 2>/dev/null
-            fi
-            
-            # 부모 셸에게 메모리 청소 명령을 상향 전달(Inject)합니다.
-            kill -HUP $$ 2>/dev/null
-            exit 0
-            ;;
-        0|q|quit|exit|"")
-            echo " 🚪 Cancelled. Safely returned to Mac terminal."
-            echo "============================================================"
-            exit 0
-            ;;
-        *)
-            echo "❌ Error: Invalid option selected. Canceling process."
-            echo "============================================================"
-            exit 1
-            ;;
-    esac
-fi
+# 다음 터미널 부팅 시 발생할 파일 시스템 충돌 방지를 위해 빈 파일 매핑
+touch "$HOME/.zsh_history" 2>/dev/null
