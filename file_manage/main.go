@@ -7,6 +7,7 @@ import (
 	"runtime"
 
 	copyx "fm/internal/copyx"
+	"fm/internal/dualpane"
 	"fm/internal/human"
 	"fm/internal/recommend"
 	"fm/internal/scanner"
@@ -174,7 +175,28 @@ func main() {
 		},
 	}
 
-	root.AddCommand(analyze, copyCmd, volsCmd)
+	dualCmd := &cobra.Command{
+		Use:   "dual [좌경로] [우경로]",
+		Short: "듀얼패널 파일관리자 (좌우 복사/이동/삭제, SSH)",
+		Args:  cobra.MaximumNArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			home, _ := os.UserHomeDir()
+			left, right := home, home
+			if len(args) >= 1 {
+				left = args[0]
+			}
+			if len(args) >= 2 {
+				right = args[1]
+			}
+			absL, _ := filepath.Abs(left)
+			absR, _ := filepath.Abs(right)
+			p := tea.NewProgram(dualpane.New(absL, absR))
+			_, err := p.Run()
+			return err
+		},
+	}
+
+	root.AddCommand(analyze, copyCmd, volsCmd, dualCmd)
 	if err := root.Execute(); err != nil {
 		os.Exit(1)
 	}
