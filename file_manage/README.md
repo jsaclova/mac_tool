@@ -7,7 +7,7 @@ Go + BubbleTea 기반 디스크 용량 분석/탐색 TUI. `st_blocks` 실제 점
 ```bash
 fm              # 전체 시스템 TUI (macOS: /System/Volumes/Data)
 fm [경로]       # 지정 경로 TUI
-fm dual [좌] [우]  # 듀얼패널 (좌우 복사/이동/삭제, SSH)
+fc [좌] [우]        # 듀얼패널 (좌우 복사/이동/삭제, SSH)
 fm analyze [경로] -n 20 --min-size 100MB   # 비대화식 분석
 fm copy <원본...> --to <외장경로>          # 외장디스크 복사
 fm volumes      # 외장디스크 목록
@@ -19,7 +19,7 @@ fm volumes      # 외장디스크 목록
 
 `↑↓/j/k` 이동 · `Enter` 하위 · `←/h/Backspace` 상위 · `q` 종료
 
-## 듀얼패널 키 (`fm dual`)
+## 듀얼패널 키 (`fc`)
 
 `Tab` 전환 · `↑↓` 이동 · `Enter` 진입 · `←` 상위 · `c` 복사→ · `m` 이동→ · `Del` 삭제(확인) · `s` 주소연결 · `q` 종료
 
