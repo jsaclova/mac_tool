@@ -1,4 +1,4 @@
-// fc - 듀얼패널 파일관리자 (단독 실행)
+// fcommand - 듀얼패널 파일관리자 (단독 실행)
 package main
 
 import (
@@ -13,8 +13,8 @@ import (
 func main() {
 	args := os.Args[1:]
 	if len(args) >= 1 && (args[0] == "-h" || args[0] == "--help") {
-		fmt.Println("사용: fc [좌경로] [우경로]")
-		fmt.Println("키: Tab 전환 · Enter 진입 · ← 상위 · c 복사→ · m 이동→ · Del 삭제 · s 주소(SSH) · q 종료")
+		fmt.Println("사용: fcommand [좌경로] [우경로]  (빌드 " + dualpane.BuildTag + ")")
+		fmt.Println("도움말: 실행 후 /? 또는 /h")
 		return
 	}
 	home, _ := os.UserHomeDir()

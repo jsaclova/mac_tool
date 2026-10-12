@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -106,6 +107,15 @@ func Dial(a Addr, password string) (*SftpFS, error) {
 	}
 	if password != "" {
 		cfg.Auth = append(cfg.Auth, ssh.Password(password))
+		// 일부 서버(PAM 등)는 password 방식 대신 keyboard-interactive 만 허용한다.
+		cfg.Auth = append(cfg.Auth, ssh.KeyboardInteractive(
+			func(name, instruction string, questions []string, echos []bool) ([]string, error) {
+				answers := make([]string, len(questions))
+				for i := range answers {
+					answers[i] = password
+				}
+				return answers, nil
+			}))
 	}
 	if len(cfg.Auth) == 0 {
 		return nil, fmt.Errorf("인증 수단 없음 (키/에이전트 없음, 비밀번호 필요)")
@@ -113,7 +123,7 @@ func Dial(a Addr, password string) (*SftpFS, error) {
 
 	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:%d", a.Host, a.Port), cfg)
 	if err != nil {
-		return nil, err
+		return nil, friendlySSHError(err)
 	}
 	sc, err := sftp.NewClient(conn)
 	if err != nil {
@@ -121,6 +131,24 @@ func Dial(a Addr, password string) (*SftpFS, error) {
 		return nil, err
 	}
 	return &SftpFS{label: a.String(), client: sc, ssh: conn}, nil
+}
+
+// friendlySSHError는 흔한 SSH 오류를 한국어 안내로 바꾼다.
+func friendlySSHError(err error) error {
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "unable to authenticate"),
+		strings.Contains(msg, "no supported methods remain"):
+		return fmt.Errorf("인증 실패 — 아이디/비밀번호 확인 (또는 키 미등록). 원문: %s", msg)
+	case strings.Contains(msg, "connection refused"):
+		return fmt.Errorf("연결 거부 — 호스트/포트 확인. 원문: %s", msg)
+	case strings.Contains(msg, "i/o timeout"), strings.Contains(msg, "no route to host"),
+		strings.Contains(msg, "connection timed out"):
+		return fmt.Errorf("연결 시간 초과 — IP/네트워크/방화벽 확인. 원문: %s", msg)
+	case strings.Contains(msg, "no such host"):
+		return fmt.Errorf("호스트를 찾을 수 없음 — 주소 확인. 원문: %s", msg)
+	}
+	return err
 }
 
 // hostKeyCallback은 known_hosts 검증 + 최초접속 자동 등록(TOFU)이다.
